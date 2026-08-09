@@ -20,7 +20,6 @@ Centralized bug tracking and QA management platform replacing Excel-based workfl
 ```
 backend/     Express API (MVC + Repository)
 frontend/    Next.js app (feature hooks/services/components)
-docs/        HLD, LLD, system design, trade-offs, scaling, interview prep
 postman/     API collection
 ```
 
