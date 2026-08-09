@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans), 'IBM Plex Sans', sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), Sora, sans-serif;
+}

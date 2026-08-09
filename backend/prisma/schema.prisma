@@ -1,0 +1,302 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectRole {
+  OWNER
+  LEAD
+  DEVELOPER
+  QA
+  MEMBER
+}
+
+enum IssueType {
+  FRONTEND
+  BACKEND
+  API
+  DATABASE
+  UI
+  UX
+  PERFORMANCE
+  SECURITY
+  DEVOPS
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Priority {
+  P0
+  P1
+  P2
+  P3
+}
+
+enum BugStatus {
+  NEW
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  VERIFIED
+  CLOSED
+  REOPENED
+  BLOCKED
+}
+
+enum ReleaseStatus {
+  PLANNED
+  IN_PROGRESS
+  RELEASED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model Role {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?    @db.Text
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  isActive     Boolean   @default(true) @map("is_active")
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  roles          UserRole[]
+  memberships    ProjectMember[]
+  reportedBugs   Bug[]           @relation("BugReporter")
+  assignedBugs   Bug[]           @relation("BugAssignee")
+  comments       Comment[]
+  attachments    Attachment[]
+  bugHistory     BugHistory[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  key         String        @unique
+  description String?       @db.Text
+  status      ProjectStatus @default(ACTIVE)
+  bugSeq      Int           @default(0) @map("bug_seq")
+  deletedAt   DateTime?     @map("deleted_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  members  ProjectMember[]
+  features Feature[]
+  bugs     Bug[]
+  releases Release[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id          String      @id @default(cuid())
+  projectId   String      @map("project_id")
+  userId      String      @map("user_id")
+  projectRole ProjectRole @default(MEMBER) @map("project_role")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Feature {
+  id          String    @id @default(cuid())
+  projectId   String    @map("project_id")
+  name        String
+  description String?   @db.Text
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  bugs    Bug[]
+
+  @@unique([projectId, name])
+  @@map("features")
+}
+
+model Bug {
+  id                String    @id @default(cuid())
+  bugKey            String    @unique @map("bug_key")
+  projectId         String    @map("project_id")
+  featureId         String?   @map("feature_id")
+  title             String
+  description       String?   @db.Text
+  issueType         IssueType @map("issue_type")
+  severity          Severity
+  priority          Priority
+  status            BugStatus @default(NEW)
+  expectedResult    String?   @map("expected_result") @db.Text
+  actualResult      String?   @map("actual_result") @db.Text
+  reproductionSteps String?   @map("reproduction_steps") @db.Text
+  environment       String?
+  buildVersion      String?   @map("build_version")
+  reporterId        String    @map("reporter_id")
+  assigneeId        String?   @map("assignee_id")
+  releaseId         String?   @map("release_id")
+  deletedAt         DateTime? @map("deleted_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  resolvedAt        DateTime? @map("resolved_at")
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  feature     Feature?     @relation(fields: [featureId], references: [id], onDelete: SetNull)
+  reporter    User         @relation("BugReporter", fields: [reporterId], references: [id])
+  assignee    User?        @relation("BugAssignee", fields: [assigneeId], references: [id])
+  release     Release?     @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  comments    Comment[]
+  attachments Attachment[]
+  history     BugHistory[]
+
+  @@index([projectId, status])
+  @@index([assigneeId])
+  @@index([severity, priority])
+  @@map("bugs")
+}
+
+model BugHistory {
+  id        String   @id @default(cuid())
+  bugId     String   @map("bug_id")
+  actorId   String   @map("actor_id")
+  field     String
+  oldValue  String?  @map("old_value") @db.Text
+  newValue  String?  @map("new_value") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  bug   Bug  @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([bugId, createdAt])
+  @@map("bug_history")
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  bugId     String    @map("bug_id")
+  authorId  String    @map("author_id")
+  body      String    @db.Text
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  bug    Bug  @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([bugId])
+  @@map("comments")
+}
+
+model Attachment {
+  id           String    @id @default(cuid())
+  bugId        String    @map("bug_id")
+  uploaderId   String    @map("uploader_id")
+  fileName     String    @map("file_name")
+  originalName String    @map("original_name")
+  mimeType     String    @map("mime_type")
+  size         Int
+  path         String
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  bug      Bug  @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id])
+
+  @@index([bugId])
+  @@map("attachments")
+}
+
+model Release {
+  id          String        @id @default(cuid())
+  projectId   String        @map("project_id")
+  name        String
+  version     String
+  notes       String?       @db.Text
+  status      ReleaseStatus @default(PLANNED)
+  releasedAt  DateTime?     @map("released_at")
+  deletedAt   DateTime?     @map("deleted_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  bugs    Bug[]
+
+  @@unique([projectId, version])
+  @@map("releases")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  title     String
+  message   String   @db.Text
+  link      String?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  @map("actor_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   String?  @db.Text
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

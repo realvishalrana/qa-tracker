@@ -1,0 +1,101 @@
+export const PERMISSIONS = {
+  PROJECT_READ: 'project:read',
+  PROJECT_CREATE: 'project:create',
+  PROJECT_UPDATE: 'project:update',
+  PROJECT_DELETE: 'project:delete',
+  PROJECT_MEMBERS_MANAGE: 'project:members:manage',
+  FEATURE_CREATE: 'feature:create',
+  FEATURE_UPDATE: 'feature:update',
+  FEATURE_DELETE: 'feature:delete',
+  BUG_READ: 'bug:read',
+  BUG_CREATE: 'bug:create',
+  BUG_UPDATE: 'bug:update',
+  BUG_ASSIGN: 'bug:assign',
+  BUG_STATUS: 'bug:status',
+  BUG_DELETE: 'bug:delete',
+  COMMENT_CREATE: 'comment:create',
+  ATTACHMENT_UPLOAD: 'attachment:upload',
+  RELEASE_READ: 'release:read',
+  RELEASE_MANAGE: 'release:manage',
+  REPORTS_READ: 'reports:read',
+  REPORTS_EXPORT: 'reports:export',
+  USERS_MANAGE: 'users:manage',
+  AUDIT_READ: 'audit:read',
+  DASHBOARD_READ: 'dashboard:read',
+  NOTIFICATIONS_READ: 'notifications:read',
+} as const;
+
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+/** Keys must match Role.name seed values */
+export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+  Admin: Object.values(PERMISSIONS),
+  'Project Manager': [
+    PERMISSIONS.PROJECT_READ,
+    PERMISSIONS.PROJECT_CREATE,
+    PERMISSIONS.PROJECT_UPDATE,
+    PERMISSIONS.PROJECT_MEMBERS_MANAGE,
+    PERMISSIONS.FEATURE_CREATE,
+    PERMISSIONS.FEATURE_UPDATE,
+    PERMISSIONS.FEATURE_DELETE,
+    PERMISSIONS.BUG_READ,
+    PERMISSIONS.BUG_CREATE,
+    PERMISSIONS.BUG_UPDATE,
+    PERMISSIONS.BUG_ASSIGN,
+    PERMISSIONS.BUG_STATUS,
+    PERMISSIONS.BUG_DELETE,
+    PERMISSIONS.COMMENT_CREATE,
+    PERMISSIONS.ATTACHMENT_UPLOAD,
+    PERMISSIONS.RELEASE_READ,
+    PERMISSIONS.RELEASE_MANAGE,
+    PERMISSIONS.REPORTS_READ,
+    PERMISSIONS.REPORTS_EXPORT,
+    PERMISSIONS.DASHBOARD_READ,
+    PERMISSIONS.NOTIFICATIONS_READ,
+  ],
+  Developer: [
+    PERMISSIONS.PROJECT_READ,
+    PERMISSIONS.BUG_READ,
+    PERMISSIONS.BUG_CREATE,
+    PERMISSIONS.BUG_UPDATE,
+    PERMISSIONS.BUG_STATUS,
+    PERMISSIONS.COMMENT_CREATE,
+    PERMISSIONS.ATTACHMENT_UPLOAD,
+    PERMISSIONS.RELEASE_READ,
+    PERMISSIONS.DASHBOARD_READ,
+    PERMISSIONS.NOTIFICATIONS_READ,
+  ],
+  QA: [
+    PERMISSIONS.PROJECT_READ,
+    PERMISSIONS.FEATURE_CREATE,
+    PERMISSIONS.BUG_READ,
+    PERMISSIONS.BUG_CREATE,
+    PERMISSIONS.BUG_UPDATE,
+    PERMISSIONS.BUG_ASSIGN,
+    PERMISSIONS.BUG_STATUS,
+    PERMISSIONS.COMMENT_CREATE,
+    PERMISSIONS.ATTACHMENT_UPLOAD,
+    PERMISSIONS.RELEASE_READ,
+    PERMISSIONS.REPORTS_READ,
+    PERMISSIONS.DASHBOARD_READ,
+    PERMISSIONS.NOTIFICATIONS_READ,
+  ],
+  Viewer: [
+    PERMISSIONS.PROJECT_READ,
+    PERMISSIONS.BUG_READ,
+    PERMISSIONS.RELEASE_READ,
+    PERMISSIONS.DASHBOARD_READ,
+    PERMISSIONS.NOTIFICATIONS_READ,
+  ],
+};
+
+export const SYSTEM_ROLE_NAMES = Object.keys(ROLE_PERMISSIONS);
+
+export function permissionsForRoles(roleNames: string[]): Permission[] {
+  const set = new Set<Permission>();
+  for (const name of roleNames) {
+    const list = ROLE_PERMISSIONS[name] || [];
+    list.forEach((p) => set.add(p));
+  }
+  return [...set];
+}
